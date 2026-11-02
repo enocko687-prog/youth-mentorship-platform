@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Your dashboard — YMP{% endblock %}
+{% block content %}
+<section class="dashboard-page">
+    <div class="shell">
+        <div class="dashboard-top">
+            <div>
+                <p class="eyebrow eyebrow-dark"><span class="eyebrow-line"></span> YOUR YMP SPACE</p>
+                <h1>Welcome, <span>{{ user["full_name"].split()[0] }}.</span></h1>
+                <p class="dashboard-subtitle">A little progress is still progress. Here's your journey at a glance.</p>
+            </div>
+            <div class="dashboard-date"><span class="date-sun" aria-hidden="true">✳</span><span>Make today<br><strong>count for you.</strong></span></div>
+        </div>
+
+        <div class="stats-grid" aria-label="Your mentorship overview">
+            <a class="stat-card stat-card-primary" href="#goals"><span class="stat-icon" aria-hidden="true">◎</span><span class="stat-label">My goals</span><strong>{{ stats["goals"] }}</strong><span class="stat-note">goals in your journey · open</span></a>
+            <a class="stat-card" href="#actions"><span class="stat-icon" aria-hidden="true">✓</span><span class="stat-label">Action steps</span><strong>{{ stats["actions"] }}</strong><span class="stat-note">still to work on · open</span></a>
+            <a class="stat-card" href="#sessions"><span class="stat-icon" aria-hidden="true">◷</span><span class="stat-label">Sessions</span><strong>{{ stats["sessions"] }}</strong><span class="stat-note">upcoming or awaiting confirmation · open</span></a>
+            <a class="stat-card" href="#resources"><span class="stat-icon" aria-hidden="true">✳</span><span class="stat-label">Resources</span><strong>{{ stats["resources"] }}</strong><span class="stat-note">ready to explore · open</span></a>
+        </div>
+        <nav class="dashboard-shortcuts" aria-label="Dashboard sections">
+            <a href="#goals">Goals</a><a href="#actions">Action steps</a><a href="#submissions">Send work</a><a href="#sessions">Sessions</a><a href="#resources">Resources</a><a href="#feedback">Feedback</a><a href="#support">Support</a>
+        </nav>
+
+        <div class="dashboard-columns">
+            <section class="dashboard-card mentor-card" id="mentor">
+                <div class="card-heading"><span class="card-kicker">YOUR CONNECTION</span><span class="card-symbol" aria-hidden="true">♡</span></div>
+                {% if mentor %}
+                    <h2>Meet your mentor.</h2>
+                    <div class="mentor-profile"><div class="avatar">{{ mentor["full_name"][0]|upper }}</div><div><strong>{{ mentor["full_name"] }}</strong><p>{{ mentor["expertise"] or "YMP mentor" }}</p></div></div>
+                    <p class="card-body">Your mentorship connection is ready to help you take your next step.</p>
+                {% else %}
+                    <h2>Your next connection is ahead.</h2>
+                    {% if match_request and match_request["match_status"] == "pending" %}
+                        <p class="card-body">Your mentor request is waiting for a response.</p>
+                        <span class="status-pill"><span></span> Request pending</span>
+                    {% else %}
+                        <p class="card-body">Choose an approved mentor to request a connection. Your match starts after they accept.</p>
+                        {% if mentors %}
+                            <form class="workspace-form match-request-form" action="{{ url_for('request_mentor_match') }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <label>Available mentor<select name="mentor_id" required><option value="">Choose a mentor</option>{% for available_mentor in mentors %}<option value="{{ available_mentor['id'] }}">{{ available_mentor["full_name"] }}{% if available_mentor["expertise"] %} — {{ available_mentor["expertise"] }}{% endif %}</option>{% endfor %}</select></label>
+                                <button class="button button-dark" type="submit">Request a match</button>
+                            </form>
+                        {% else %}
+                            <span class="status-pill"><span></span> No approved mentors available yet</span>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+            </section>
+            <section class="dashboard-card focus-card" id="next-move">
+                <div class="card-heading"><span class="card-kicker">KEEP YOUR MOMENTUM</span><span class="card-symbol" aria-hidden="true">✦</span></div>
+                <h2>Make your next move.</h2>
+                <p class="card-body">Your goals, action plans and session bookings will live here as they are added to your mentorship journey.</p>
+                <div class="focus-footer"><span class="focus-dot"></span> One step at a time is still forward.</div>
+            </section>
+        </div>
+
+        <section class="dashboard-card resource-row">
+            <div class="resource-icon" aria-hidden="true">✳</div>
+            <div><span class="card-kicker">LEARN SOMETHING NEW</span><h2>Resources for the road ahead</h2><p class="card-body">Explore learning materials picked to help you build skills, confidence and momentum.</p></div>
+            <span class="resource-count">{{ stats["resources"] }} available</span>
+        </section>
+
+        <div class="workspace-grid">
+            <section class="workspace-card" id="goals">
+                <div class="workspace-heading"><div><span class="card-kicker">SET YOUR DIRECTION</span><h2>My goals</h2></div><span class="workspace-symbol" aria-hidden="true">◎</span></div>
+                <form class="workspace-form" action="{{ url_for('create_goal') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>Goal title<input name="title" maxlength="120" required placeholder="What would you like to achieve?"></label>
+                    <label>More detail<textarea name="description" rows="2" maxlength="2000" placeholder="Add a few details (optional)"></textarea></label>
+                    <label>Target date<input name="target_date" type="date"></label>
+                    <button class="button button-dark" type="submit">Add goal <span aria-hidden="true">+</span></button>
+                </form>
+                <div class="workspace-list">
+                    {% for goal in goals %}
+                        <article class="list-item">
+                            <div class="list-item-main"><strong>{{ goal["title"] }}</strong><span>{{ goal["description"] or "Keep taking small steps towards this goal." }}{% if goal["target_date"] %} · Target {{ goal["target_date"] }}{% endif %}</span><div class="progress-track" role="progressbar" aria-label="{{ goal['title'] }} progress" aria-valuenow="{{ goal['progress'] }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ goal['progress'] }}%"></span></div><small>{{ goal["progress"] }}% complete</small></div>
+                            <div class="list-item-actions">
+                                <form action="{{ url_for('update_goal_progress', goal_id=goal['id']) }}" method="post" class="progress-update-form">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <label for="progress-{{ goal['id'] }}">Update progress</label>
+                                    <input id="progress-{{ goal['id'] }}" name="progress" type="range" min="0" max="100" step="5" value="{{ goal['progress'] }}" aria-label="Set {{ goal['title'] }} progress">
+                                    <button class="mini-button" type="submit">Save</button>
+                                </form>
+                                <form action="{{ url_for('delete_goal', goal_id=goal['id']) }}" method="post" class="inline-form">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="mini-button mini-button-muted" type="submit">Remove</button>
+                                </form>
+                            </div>
+                        </article>
+                    {% else %}
+                        <p class="empty-state">Your goals will appear here. Add your first one above.</p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="workspace-card" id="actions">
+                <div class="workspace-heading"><div><span class="card-kicker">MAKE IT PRACTICAL</span><h2>Action steps</h2></div><span class="workspace-symbol" aria-hidden="true">✓</span></div>
+                <form class="workspace-form" action="{{ url_for('create_action') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>Action<input name="title" maxlength="160" required placeholder="One small thing you can do"></label>
+                    <label>Details<textarea name="description" rows="2" maxlength="2000" placeholder="Optional notes"></textarea></label>
+                    <label>When<input name="action_date" type="date"></label>
+                    <button class="button button-dark" type="submit">Add action <span aria-hidden="true">+</span></button>
+                </form>
+                <div class="workspace-list">
+                    {% for action in actions %}
+                        <article class="list-item {% if action['completed'] %}list-item-done{% endif %}">
+                            <div class="list-item-main"><strong>{{ action["title"] }}</strong><span>{{ action["description"] or ("Completed" if action["completed"] else "Still to do") }}{% if action["action_date"] %} · {{ action["action_date"] }}{% endif %}</span></div>
+                            <div class="list-item-actions">
+                                {% if not action["completed"] %}
+                                    <form action="{{ url_for('complete_action', action_id=action['id']) }}" method="post" class="inline-form">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="mini-button" type="submit">Complete</button>
+                                    </form>
+                                {% endif %}
+                                <form action="{{ url_for('delete_action', action_id=action['id']) }}" method="post" class="inline-form">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="mini-button mini-button-muted" type="submit">Remove</button>
+                                </form>
+                            </div>
+                        </article>
+                    {% else %}
+                        <p class="empty-state">Your action steps will appear here. Add a first step above.</p>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <section class="workspace-card workspace-wide" id="submissions">
+            <div class="workspace-heading"><div><span class="card-kicker">SHARE WHAT YOU HAVE DONE</span><h2>Send your work to your mentor</h2></div><span class="workspace-symbol" aria-hidden="true">↗</span></div>
+            {% if mentor and goals %}
+                <p class="workspace-intro">Send a written update, a link, or a PDF/JPG/PNG file up to 5 MB. Your matched mentor will review it and send feedback here.</p>
+                <form class="workspace-form submission-form" action="{{ url_for('submit_goal_work') }}" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>Related goal
+                        <select name="goal_id" required data-goal-submission-select>
+                            {% for goal in goals %}<option value="{{ goal['id'] }}">{{ goal["title"] }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    <label>What did you work on?<textarea name="work_notes" rows="4" maxlength="3000" placeholder="Describe what you tried, learned, or completed"></textarea></label>
+                    <label>Link to your work (optional)<input name="work_url" type="url" maxlength="2000" placeholder="https://..."></label>
+                    <label>Attach your work (optional)<input name="work_file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"><span class="field-hint">PDF, JPG or PNG · maximum 5 MB</span></label>
+                    <button class="button button-dark" type="submit">Send to my mentor</button>
+                </form>
+            {% elif not mentor %}
+                <p class="workspace-intro">Request and accept a mentor match before sending work for review. Your goals and progress are saved while you wait.</p>
+            {% else %}
+                <p class="workspace-intro">Add a goal first, then you can send work and results related to it.</p>
+            {% endif %}
+            <div class="workspace-list">
+                {% for submission in submissions %}
+                    <article class="list-item submission-item">
+                        <div class="list-item-main">
+                            <strong>{{ submission["goal_title"] }} · {{ submission["status"]|title }}</strong>
+                            <span>Sent {{ submission["created_at"] }} to {{ submission["mentor_name"] }}</span>
+                            {% if submission["work_notes"] %}<span>{{ submission["work_notes"] }}</span>{% endif %}
+                            {% if submission["work_url"] %}<a href="{{ submission['work_url'] }}" target="_blank" rel="noopener noreferrer">Open submitted work link</a>{% endif %}
+                            {% if submission["file_name"] %}<a href="{{ url_for('download_work_submission', submission_id=submission['id']) }}">Download {{ submission["file_name"] }}</a>{% endif %}
+                            {% if submission["mentor_feedback"] %}<span class="submission-feedback"><strong>Mentor feedback:</strong> {{ submission["mentor_feedback"] }}</span>{% endif %}
+                        </div>
+                    </article>
+                {% else %}
+                    <p class="empty-state">Your sent work and mentor feedback will appear here.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="workspace-card workspace-wide" id="sessions">
+            <div class="workspace-heading"><div><span class="card-kicker">MAKE TIME TO CONNECT</span><h2>Mentorship sessions</h2></div><span class="workspace-symbol" aria-hidden="true">◷</span></div>
+            {% if mentor %}
+                <p class="workspace-intro">Request a session with {{ mentor["full_name"] }}. They will confirm the time with you.</p>
+                <form class="workspace-form session-form" action="{{ url_for('create_booking') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>Date<input name="session_date" type="date" required></label>
+                    <label>Time<input name="session_time" type="time" required></label>
+                    <label>Meeting type<select name="meeting_type"><option value="online">Online</option><option value="in_person">In person</option></select></label>
+                    <label>Notes<input name="notes" maxlength="1000" placeholder="Optional"></label>
+                    <button class="button button-dark" type="submit">Request a session</button>
+                </form>
+            {% else %}
+                <p class="workspace-intro">Session requests become available once a mentor has been matched to you. You can still add goals and action steps while you wait.</p>
+            {% endif %}
+            <div class="workspace-list">
+                {% for booking in bookings %}
+                    <article class="list-item">
+                        <div class="list-item-main"><strong>{{ booking["session_date"] }}{% if booking["session_time"] %} at {{ booking["session_time"] }}{% endif %}</strong><span>With {{ booking["mentor_name"] }} · {{ booking["meeting_type"]|replace("_", " ")|title }}</span></div>
+                        <span class="status-pill"><span></span>{{ booking["status"]|title }}</span>
+                    </article>
+                {% else %}
+                    <p class="empty-state">Your session requests and upcoming meetings will appear here.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="workspace-card workspace-wide" id="resources">
+            <div class="workspace-heading"><div><span class="card-kicker">LEARN AT YOUR PACE</span><h2>Learning resources</h2></div><span class="workspace-symbol" aria-hidden="true">✳</span></div>
+            <div class="resource-grid">
+                {% for resource in resources %}
+                    <article class="resource-card">
+                        <span class="card-kicker">{{ resource["category"] or "YMP RESOURCE" }}</span>
+                        <h3>{{ resource["title"] }}</h3>
+                        <p>{{ resource["description"] or "A resource to support your learning and growth." }}</p>
+                        {% if resource["resource_url"] %}
+                            <form action="{{ url_for('open_resource', resource_id=resource['id']) }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="mini-button" type="submit">Open resource</button>
+                            </form>
+                        {% else %}
+                            <span class="resource-unavailable">Link coming soon</span>
+                        {% endif %}
+                    </article>
+                {% else %}
+                    <p class="empty-state">New learning resources will appear here when the programme adds them.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="workspace-grid">
+            <section class="workspace-card" id="feedback">
+                <div class="workspace-heading"><div><span class="card-kicker">HELP US GROW</span><h2>Share feedback</h2></div><span class="workspace-symbol" aria-hidden="true">✦</span></div>
+                <form class="workspace-form" action="{{ url_for('submit_feedback') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>Subject<input name="subject" maxlength="120" placeholder="Optional"></label>
+                    <label>Your feedback<textarea name="message" rows="4" maxlength="3000" required placeholder="Tell us what is working or what could be better"></textarea></label>
+                    <label>Rating<select name="rating"><option value="">No rating</option><option value="5">5 — Excellent</option><option value="4">4 — Good</option><option value="3">3 — Okay</option><option value="2">2 — Needs work</option><option value="1">1 — Poor</option></select></label>
+                    <button class="button button-dark" type="submit">Send feedback</button>
+                </form>
+            </section>
+
+            <section class="workspace-card" id="support">
+                <div class="workspace-heading"><div><span class="card-kicker">YOUR SAFETY MATTERS</span><h2>Ask for support</h2></div><span class="workspace-symbol" aria-hidden="true">♡</span></div>
+                <p class="workspace-intro">Share a concern with the programme team. If anyone is in immediate danger, contact local emergency services.</p>
+                <form class="workspace-form" action="{{ url_for('submit_support_report') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>What is this about?<select name="report_category" required><option value="">Choose one</option><option value="safety">Safety</option><option value="wellbeing">Wellbeing</option><option value="mentorship">Mentorship</option><option value="other">Other</option></select></label>
+                    <label>Urgency<select name="urgency"><option value="normal">Normal</option><option value="urgent">Urgent</option></select></label>
+                    <label>What happened?<textarea name="description" rows="4" maxlength="5000" required placeholder="Share only the details you are comfortable providing"></textarea></label>
+                    <button class="button button-dark" type="submit">Send support request</button>
+                </form>
+            </section>
+        </div>
+    </div>
+</section>
+{% endblock %}

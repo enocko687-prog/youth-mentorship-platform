@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Programme administration — YMP{% endblock %}
+{% block content %}
+<section class="dashboard-page">
+    <div class="shell">
+        <div class="dashboard-top">
+            <div>
+                <p class="eyebrow eyebrow-dark"><span class="eyebrow-line"></span> PROGRAMME TEAM</p>
+                <h1>Admin <span>workspace.</span></h1>
+                <p class="dashboard-subtitle">Review mentor profiles, support requests, matches and learning resources.</p>
+            </div>
+        </div>
+        <nav class="dashboard-shortcuts" aria-label="Admin workspace sections">
+            <a href="#contact-requests">View contact requests</a>
+            <a href="#mentors">Mentors</a>
+            <a href="#matches">Matches</a>
+            <a href="#resources">Resources</a>
+            <a href="#feedback">Feedback</a>
+            <a href="#reports">Support reports</a>
+        </nav>
+
+        <div class="workspace-grid">
+            <section class="workspace-card" id="mentors">
+                <div class="workspace-heading"><div><span class="card-kicker">REVIEW PROFILES</span><h2>Mentors</h2></div><span class="workspace-symbol" aria-hidden="true">✦</span></div>
+                <div class="workspace-list">
+                    {% for mentor in mentors %}
+                        <article class="list-item"><div class="list-item-main"><strong>{{ mentor["full_name"] }}</strong><span>{{ mentor["email"] }} · {{ mentor["expertise"] or "Expertise not provided" }} · {{ mentor["vetting_status"]|title }}</span></div>
+                            {% if mentor["vetting_status"] != "approved" %}<form action="{{ url_for('approve_mentor', mentor_id=mentor['id']) }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="mini-button" type="submit">Approve</button></form>{% endif %}
+                        </article>
+                    {% else %}<p class="empty-state">No mentor accounts have registered yet.</p>{% endfor %}
+                </div>
+            </section>
+
+            <section class="workspace-card" id="matches">
+                <div class="workspace-heading"><div><span class="card-kicker">CONNECT MEMBERS</span><h2>Create a mentor match</h2></div><span class="workspace-symbol" aria-hidden="true">◎</span></div>
+                <form class="workspace-form" action="{{ url_for('admin_create_match') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>Mentee<select name="mentee_id" required><option value="">Choose a mentee</option>{% for mentee in mentees %}<option value="{{ mentee['id'] }}">{{ mentee["full_name"] }} — {{ mentee["email"] }}</option>{% endfor %}</select></label>
+                    <label>Approved mentor<select name="mentor_id" required><option value="">Choose a mentor</option>{% for mentor in mentors if mentor["vetting_status"] == "approved" %}<option value="{{ mentor['id'] }}">{{ mentor["full_name"] }} — {{ mentor["expertise"] or "Mentor" }}</option>{% endfor %}</select></label>
+                    <button class="button button-dark" type="submit">Send match request</button>
+                </form>
+                <div class="workspace-list">{% for match in matches %}<article class="list-item"><div class="list-item-main"><strong>{{ match["mentee_name"] }} and {{ match["mentor_name"] }}</strong><span>{{ match["match_status"]|title }}</span></div></article>{% else %}<p class="empty-state">Mentor matches will appear here.</p>{% endfor %}</div>
+            </section>
+        </div>
+
+        <section class="workspace-card workspace-wide" id="contact-requests">
+            <div class="workspace-heading"><div><span class="card-kicker">FOLLOW UP WITH PEOPLE</span><h2>Contact requests</h2></div><span class="workspace-symbol" aria-hidden="true">✉</span></div>
+            <p class="workspace-intro">Reply by phone, WhatsApp or email using the contact details provided, then mark the request as responded.</p>
+            <div class="workspace-list">
+                {% for item in contact_requests %}
+                    <article class="list-item contact-request-item">
+                        <div class="list-item-main">
+                            <strong>{{ item["full_name"] }} · {{ item["request_type"]|replace("_", " ")|title }}</strong>
+                            <span>{{ item["created_at"] }} · {{ item["status"]|title }}</span>
+                            <span>{{ item["message"] }}</span>
+                            <div class="contact-request-links">
+                                <a href="mailto:{{ item['email'] }}?subject={{ ('YMP follow-up: ' ~ item['request_type'])|urlencode }}">Email {{ item["email"] }}</a>
+                                {% if item["phone"] %}
+                                    <a href="tel:{{ item['phone']|replace(' ', '')|replace('-', '') }}">Call {{ item["phone"] }}</a>
+                                    <a href="https://wa.me/{{ item['phone']|replace('+', '')|replace(' ', '')|replace('-', '')|replace('(', '')|replace(')', '')|replace('.', '') }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if item["status"] == "pending" %}
+                            <form action="{{ url_for('mark_contact_request_responded', contact_request_id=item['id']) }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="mini-button" type="submit">Mark responded</button>
+                            </form>
+                        {% endif %}
+                    </article>
+                {% else %}
+                    <p class="empty-state">New messages sent from the contact form will appear here.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="workspace-grid">
+            <section class="workspace-card" id="resources">
+                <div class="workspace-heading"><div><span class="card-kicker">SUPPORT LEARNING</span><h2>Publish a resource</h2></div><span class="workspace-symbol" aria-hidden="true">✳</span></div>
+                <form class="workspace-form" action="{{ url_for('admin_create_resource') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>Title<input name="title" maxlength="160" required></label>
+                    <label>Category<input name="category" maxlength="80" placeholder="For example, careers"></label>
+                    <label>Link<input name="resource_url" type="url" maxlength="2000" placeholder="https://" required></label>
+                    <label>Description<textarea name="description" rows="3" maxlength="2000"></textarea></label>
+                    <button class="button button-dark" type="submit">Publish resource</button>
+                </form>
+                <div class="workspace-list">{% for resource in resources %}<article class="list-item"><div class="list-item-main"><strong>{{ resource["title"] }}</strong><span>{{ resource["category"] or "Uncategorised" }} · {{ resource["resource_url"] }}</span></div></article>{% else %}<p class="empty-state">No resources have been published yet.</p>{% endfor %}</div>
+            </section>
+
+            <section class="workspace-card" id="feedback">
+                <div class="workspace-heading"><div><span class="card-kicker">LISTEN AND IMPROVE</span><h2>Member feedback</h2></div><span class="workspace-symbol" aria-hidden="true">✦</span></div>
+                <div class="workspace-list">{% for item in feedback_items %}
+                    <article class="list-item"><div class="list-item-main"><strong>{{ item["subject"] or "Feedback" }}{% if item["rating"] %} · {{ item["rating"] }}/5{% endif %}</strong><span>From {{ item["author_name"] }} · {{ item["created_at"] }}</span><span>{{ item["message"] }}</span></div></article>
+                {% else %}<p class="empty-state">Member feedback will appear here.</p>{% endfor %}</div>
+            </section>
+
+            <section class="workspace-card" id="reports">
+                <div class="workspace-heading"><div><span class="card-kicker">FOLLOW UP WITH CARE</span><h2>Open support reports</h2></div><span class="workspace-symbol" aria-hidden="true">♡</span></div>
+                <div class="workspace-list">{% for report in reports %}
+                    <article class="list-item"><div class="list-item-main"><strong>{{ report["report_category"]|title }} · {{ report["urgency"]|title }}</strong><span>From {{ report["reporter_name"] }} · {{ report["created_at"] }}</span><span>{{ report["description"] }}</span></div><form action="{{ url_for('close_support_report', report_id=report['id']) }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="mini-button" type="submit">Mark reviewed</button></form></article>
+                {% else %}<p class="empty-state">There are no open safeguarding reports.</p>{% endfor %}</div>
+            </section>
+        </div>
+    </div>
+</section>
+{% endblock %}

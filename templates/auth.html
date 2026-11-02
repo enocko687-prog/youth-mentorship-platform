@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ "Create your account" if mode == "register" else "Sign in" }} — YMP{% endblock %}
+{% block content %}
+<section class="auth-section">
+    <div class="auth-aside">
+        <div class="auth-aside-inner">
+            <p class="eyebrow"><span class="eyebrow-line"></span> Your growth, your way</p>
+            <h1>{{ "Make space for your next chapter." if mode == "register" else "Good to have you back." }}</h1>
+            <p>{{ "Start building a future that feels like yours, with people and tools to help along the way." if mode == "register" else "Pick up where you left off and keep moving towards what matters to you." }}</p>
+            <div class="auth-quote"><span aria-hidden="true">✳</span><p>“A little guidance can change a lot.”</p></div>
+        </div>
+        <div class="auth-decoration" aria-hidden="true"><div></div><div></div><div></div></div>
+    </div>
+    <div class="auth-panel">
+        <div class="auth-card">
+            <p class="eyebrow eyebrow-dark">{{ "GET STARTED" if mode == "register" else "WELCOME BACK" }}</p>
+            <h2>{{ "Create your account" if mode == "register" else "Sign in to YMP" }}</h2>
+            <p class="auth-intro">{{ "Your journey starts with a few details." if mode == "register" else "Your next step is right where you left it." }}</p>
+            <form method="post" class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if mode == "register" %}
+                    <label for="full_name">Your name</label>
+                    <input id="full_name" name="full_name" type="text" autocomplete="name" maxlength="100" required value="{{ request.form.get('full_name', '') }}">
+                    <label for="role">I am joining as a</label>
+                    <select id="role" name="role" required>
+                        <option value="mentee" {% if request.form.get('role', 'mentee') == 'mentee' %}selected{% endif %}>Mentee — looking for guidance</option>
+                        <option value="mentor" {% if request.form.get('role') == 'mentor' %}selected{% endif %}>Mentor — ready to share experience</option>
+                    </select>
+                {% endif %}
+                <label for="email">Email address</label>
+                <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required value="{{ request.form.get('email', '') }}">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" minlength="{{ 8 if mode == 'register' else 1 }}" required>
+                {% if mode == "register" %}
+                    <label for="password_confirmation">Confirm password</label>
+                    <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" minlength="8" required>
+                    <p class="field-hint">Use at least 8 characters.</p>
+                {% endif %}
+                <button class="button button-dark button-full" type="submit">{{ "Create my account" if mode == "register" else "Sign in" }}</button>
+            </form>
+            <p class="auth-switch">
+                {{ "Already have an account?" if mode == "register" else "New to YMP?" }}
+                <a href="{{ url_for('login' if mode == 'register' else 'register') }}">{{ "Sign in" if mode == "register" else "Create an account" }}</a>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

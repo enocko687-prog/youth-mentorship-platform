@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#10263b">
+    <meta name="description" content="Connect with mentors, set goals, request sessions and find learning resources with YMP.">
+    <title>{% block title %}Youth Mentorship Platform{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='ymp-mark.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+    <script src="{{ url_for('static', filename='site.js') }}" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+        <div class="shell header-inner">
+            <a class="brand" href="{{ url_for('home') }}" aria-label="YMP home">
+                <img class="brand-mark" src="{{ url_for('static', filename='ymp-mark.svg') }}" alt="">
+                <span class="brand-copy"><strong>YMP</strong><small>Youth Mentorship Platform</small></span>
+            </a>
+            <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation">
+                <span></span><span></span><span></span>
+            </button>
+            <nav class="primary-nav" id="primary-nav" aria-label="Main navigation">
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('dashboard') }}">My dashboard</a>
+                    <form class="nav-form" action="{{ url_for('logout') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="nav-signin" type="submit">Sign out</button>
+                    </form>
+                {% else %}
+                    <a href="{{ url_for('home') }}#journey">How it works</a>
+                    <a href="{{ url_for('login') }}">Sign in</a>
+                    <a class="button button-small" href="{{ url_for('register') }}">Join YMP</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-stack shell" role="status" aria-live="polite">
+                {% for category, message in messages %}
+                    <p class="flash flash-{{ category }}">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <main id="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="shell footer-inner">
+            <a class="brand footer-brand" href="{{ url_for('home') }}">
+                <img class="brand-mark" src="{{ url_for('static', filename='ymp-mark.svg') }}" alt="">
+                <span class="brand-copy"><strong>YMP</strong><small>Youth Mentorship Platform</small></span>
+            </a>
+            <p>Mentorship, goals and learning resources for young people.</p>
+            <div class="footer-contact">
+                <a href="tel:{{ public_contact_phone|replace(' ', '') }}">{{ public_contact_phone }}</a>
+                <a href="{{ public_whatsapp_url }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                {% for network, profile_url in public_social_links %}
+                    <a href="{{ profile_url }}" target="_blank" rel="noopener noreferrer">{{ network }}</a>
+                {% endfor %}
+            </div>
+            <span class="footer-copy">© <span data-current-year>2026</span> YMP</span>
+        </div>
+    </footer>
+</body>
+</html>

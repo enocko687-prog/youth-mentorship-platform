@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: youth-mentorship-platform
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app
+    healthCheckPath: /
+    envVars:
+      - key: YMP_ENV
+        value: production
+      - key: YMP_SECRET_KEY
+        generateValue: true
+      - key: YMP_DATABASE_PATH
+        value: /tmp/youth_mentorship.db
+      - key: YMP_UPLOAD_FOLDER
+        value: /tmp/ymp-uploads
+      - key: YMP_COOKIE_SECURE
+        value: "1"

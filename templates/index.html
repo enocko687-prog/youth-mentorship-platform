@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}YMP — Youth Mentorship Platform{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="shell hero-grid">
+        <div class="hero-copy">
+            <p class="eyebrow">Youth Mentorship Platform</p>
+            <h1>Mentorship, with a plan.</h1>
+            <p class="hero-description">
+                Connect with a mentor, set goals, request sessions and find learning resources in one place.
+            </p>
+            <div class="hero-actions">
+                <a class="button button-gold" href="{{ url_for('register') }}">Create an account</a>
+                <a class="text-link text-link-light" href="#journey">How it works</a>
+            </div>
+        </div>
+        <div class="platform-summary" aria-label="Platform features">
+            <p class="platform-summary-label">What you can do on YMP</p>
+            <ul>
+                <li><span>Mentor connections</span><span>Send and manage match requests</span></li>
+                <li><span>Personal goals</span><span>Set goals and update your progress</span></li>
+                <li><span>Sessions</span><span>Request and keep track of meetings</span></li>
+                <li><span>Learning resources</span><span>Browse materials shared by the programme</span></li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="section journey-section" id="journey">
+    <div class="shell">
+        <div class="section-heading">
+            <p class="eyebrow eyebrow-dark">Getting started</p>
+            <h2>How YMP works</h2>
+            <p>Set up your profile, connect with a mentor and use the platform to keep your plans organized.</p>
+        </div>
+        <div class="journey-grid">
+            <article class="journey-card">
+                <span class="step-number">01</span><span class="step-icon" aria-hidden="true">◎</span>
+                <h3>Create your profile</h3><p>Register as a mentee or mentor and add the details needed to get started.</p>
+            </article>
+            <article class="journey-card">
+                <span class="step-number">02</span><span class="step-icon" aria-hidden="true">◎</span>
+                <h3>Manage mentor matches</h3><p>Mentees can request a match. Mentors can review requests and manage their connections.</p>
+            </article>
+            <article class="journey-card">
+                <span class="step-number">03</span><span class="step-icon" aria-hidden="true">✳</span>
+                <h3>Keep track of next steps</h3><p>Update goals, request sessions and access learning resources from your dashboard.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="promise-section">
+    <div class="shell promise-grid">
+        <div>
+            <p class="eyebrow">For mentees and mentors</p>
+            <h2>The practical details, in one place.</h2>
+        </div>
+        <div class="promise-copy">
+            <p>Use your dashboard to review goals, plan action steps, manage session requests and find learning materials shared by the programme.</p>
+            <a class="text-link text-link-light" href="{{ url_for('register') }}">Create an account</a>
+        </div>
+    </div>
+</section>
+
+<section class="closing-section">
+    <div class="shell closing-card">
+        <p class="eyebrow eyebrow-dark">Get started</p>
+        <h2>Ready to use YMP?</h2>
+        <p>Create an account to access the mentorship platform.</p>
+        <a class="button button-dark" href="{{ url_for('register') }}">Create an account</a>
+        <p class="closing-signin">Already part of YMP? <a href="{{ url_for('login') }}">Sign in</a></p>
+    </div>
+</section>
+
+<section class="section contact-section" id="contact">
+    <div class="shell contact-layout">
+        <div class="contact-copy">
+            <p class="eyebrow eyebrow-dark">GET IN TOUCH</p>
+            <h2>Tell us what you need.</h2>
+            <p>Send a mentorship request, ask a question or share feedback. Our programme team will follow up using the contact details you provide.</p>
+            <div class="contact-links">
+                <a href="tel:{{ public_contact_phone|replace(' ', '') }}">Call {{ public_contact_phone }}</a>
+                <a href="{{ public_whatsapp_url }}" target="_blank" rel="noopener noreferrer">Message us on WhatsApp</a>
+                {% for network, profile_url in public_social_links %}
+                    <a href="{{ profile_url }}" target="_blank" rel="noopener noreferrer">{{ network }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        <form class="workspace-form contact-form" action="{{ url_for('submit_contact_request') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label>Your name<input name="full_name" type="text" autocomplete="name" maxlength="100" required></label>
+            <label>Email address<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+            <label>Phone number (optional)<input name="phone" type="tel" autocomplete="tel" maxlength="30"></label>
+            <label>What is this about?
+                <select name="request_type" required>
+                    <option value="">Choose one</option>
+                    <option value="mentorship">Mentorship request</option>
+                    <option value="question">Programme question</option>
+                    <option value="feedback">Feedback</option>
+                    <option value="other">Something else</option>
+                </select>
+            </label>
+            <label>Your message<textarea name="message" rows="5" maxlength="3000" required placeholder="How can we help?"></textarea></label>
+            <button class="button button-dark" type="submit">Send your request</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

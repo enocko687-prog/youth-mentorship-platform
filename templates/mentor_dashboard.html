@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Mentor workspace — YMP{% endblock %}
+{% block content %}
+<section class="dashboard-page">
+    <div class="shell">
+        <div class="dashboard-top">
+            <div>
+                <p class="eyebrow eyebrow-dark"><span class="eyebrow-line"></span> MENTOR WORKSPACE</p>
+                <h1>Welcome, <span>{{ user["full_name"].split()[0] }}.</span></h1>
+                <p class="dashboard-subtitle">Share your experience and make a meaningful difference.</p>
+            </div>
+            <span class="status-pill"><span></span> Profile {{ profile["vetting_status"]|title }}</span>
+        </div>
+        <nav class="dashboard-shortcuts" aria-label="Mentor workspace sections">
+            <a href="#profile">Profile</a>
+            <a href="#matches">Mentee requests</a>
+            <a href="#submissions">Work to review</a>
+            <a href="#sessions">Sessions</a>
+        </nav>
+
+        <div class="workspace-grid">
+            <section class="workspace-card" id="profile">
+                <div class="workspace-heading"><div><span class="card-kicker">HELP PEOPLE FIND YOU</span><h2>Your mentor profile</h2></div><span class="workspace-symbol" aria-hidden="true">✦</span></div>
+                <p class="workspace-intro">Complete your profile. An administrator reviews mentor profiles before mentees can request a match.</p>
+                <form class="workspace-form" action="{{ url_for('update_mentor_profile') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label>Expertise<input name="expertise" maxlength="160" value="{{ profile['expertise'] or '' }}" placeholder="For example, career development"></label>
+                    <label>Qualifications<input name="qualifications" maxlength="500" value="{{ profile['qualifications'] or '' }}" placeholder="Relevant qualifications"></label>
+                    <label>Experience<input name="experience" maxlength="500" value="{{ profile['experience'] or '' }}" placeholder="Your relevant experience"></label>
+                    <label>About you<textarea name="biography" rows="4" maxlength="3000" placeholder="Tell mentees a little about yourself">{{ profile["biography"] or "" }}</textarea></label>
+                    <label>Availability<input name="availability" maxlength="500" value="{{ profile['availability'] or '' }}" placeholder="When you are usually available"></label>
+                    <button class="button button-dark" type="submit">Save profile</button>
+                </form>
+            </section>
+
+            <section class="workspace-card" id="matches">
+                <div class="workspace-heading"><div><span class="card-kicker">BUILD CONNECTIONS</span><h2>Mentee requests</h2></div><span class="workspace-symbol" aria-hidden="true">◎</span></div>
+                <div class="workspace-list">
+                    {% for match in matches %}
+                        <article class="list-item">
+                            <div class="list-item-main"><strong>{{ match["full_name"] }}</strong><span>{{ match["email"] }} · {{ match["match_status"]|title }}</span></div>
+                            <div class="list-item-actions">
+                                {% if match["match_status"] == "pending" %}
+                                    <form action="{{ url_for('decide_mentor_match', match_id=match['id'], decision='accept') }}" method="post" class="inline-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="mini-button" type="submit">Accept</button></form>
+                                    <form action="{{ url_for('decide_mentor_match', match_id=match['id'], decision='decline') }}" method="post" class="inline-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="mini-button mini-button-muted" type="submit">Decline</button></form>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% else %}
+                        <p class="empty-state">New mentee requests will appear here.</p>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <section class="workspace-card workspace-wide" id="submissions">
+            <div class="workspace-heading"><div><span class="card-kicker">REVIEW MENTEE WORK</span><h2>Work sent for review</h2></div><span class="workspace-symbol" aria-hidden="true">↙</span></div>
+            <p class="workspace-intro">Review submissions from your matched mentees and send written feedback.</p>
+            <div class="workspace-list">
+                {% for submission in work_submissions %}
+                    <article class="list-item submission-item">
+                        <div class="list-item-main">
+                            <strong>{{ submission["goal_title"] }} · {{ submission["mentee_name"] }}</strong>
+                            <span>Sent {{ submission["created_at"] }} · {{ submission["status"]|title }}</span>
+                            {% if submission["work_notes"] %}<span>{{ submission["work_notes"] }}</span>{% endif %}
+                            {% if submission["work_url"] %}<a href="{{ submission['work_url'] }}" target="_blank" rel="noopener noreferrer">Open submitted work link</a>{% endif %}
+                            {% if submission["file_name"] %}<a href="{{ url_for('download_work_submission', submission_id=submission['id']) }}">Download {{ submission["file_name"] }}</a>{% endif %}
+                            {% if submission["status"] == "pending" %}
+                                <form class="workspace-form submission-feedback-form" action="{{ url_for('review_work_submission', submission_id=submission['id']) }}" method="post">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <label>Feedback for {{ submission["mentee_name"] }}<textarea name="mentor_feedback" rows="3" maxlength="3000" required placeholder="Share helpful next steps or encouragement"></textarea></label>
+                                    <button class="mini-button" type="submit">Send feedback</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% else %}
+                    <p class="empty-state">Work submitted by your matched mentees will appear here.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="workspace-card workspace-wide" id="sessions">
+            <div class="workspace-heading"><div><span class="card-kicker">PLAN YOUR TIME</span><h2>Session requests</h2></div><span class="workspace-symbol" aria-hidden="true">◷</span></div>
+            <div class="workspace-list">
+                {% for booking in bookings %}
+                    <article class="list-item">
+                        <div class="list-item-main"><strong>{{ booking["mentee_name"] }} · {{ booking["session_date"] }}{% if booking["session_time"] %} at {{ booking["session_time"] }}{% endif %}</strong><span>{{ booking["meeting_type"]|replace("_", " ")|title }}{% if booking["notes"] %} · {{ booking["notes"] }}{% endif %}</span></div>
+                        <div class="list-item-actions"><span class="status-pill"><span></span>{{ booking["status"]|title }}</span>
+                            {% if booking["status"] == "pending" %}
+                                <form action="{{ url_for('confirm_booking', booking_id=booking['id']) }}" method="post" class="inline-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="mini-button" type="submit">Confirm</button></form>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% else %}
+                    <p class="empty-state">Session requests from your matched mentees will appear here.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</section>
+{% endblock %}
