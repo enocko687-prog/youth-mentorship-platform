@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Platform access — YMP{% endblock %}
+{% block content %}
+<section class="section shared-access-section">
+    <div class="shared-access-card">
+        <p class="eyebrow eyebrow-dark">MEMBERS ACCESS</p>
+        {% if password_configured %}
+            <h1>Enter the shared password</h1>
+            <p>Enter the password you received, then confirm it to continue to the platform.</p>
+            <form method="post" class="auth-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="password">Shared password</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+                <label for="password_confirmation">Confirm shared password</label>
+                <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="current-password" maxlength="128" required>
+                <button class="button button-dark button-full" type="submit">Continue to YMP</button>
+            </form>
+        {% else %}
+            <h1>Access password not set up</h1>
+            <p>The platform owner must configure the shared password before this page can be used.</p>
+            <p>From the project folder, run:</p>
+            <p><code>python -m flask --app server configure-access-password</code></p>
+            <p>After setting the password, restart the app. Do not send this setup page as the invitation link until the platform is deployed online.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

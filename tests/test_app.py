@@ -5,10 +5,12 @@ import unittest
 from io import BytesIO
 from datetime import date, timedelta
 from pathlib import Path
+from urllib.parse import parse_qs
 from unittest.mock import patch
+from urllib.error import URLError
 
 from server import _get_secret_key, create_app
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 class MentorshipAppTests(unittest.TestCase):
@@ -21,6 +23,9 @@ class MentorshipAppTests(unittest.TestCase):
                 "SECRET_KEY": "test-key",
                 "DATABASE": str(database_path),
                 "UPLOAD_FOLDER": str(Path(self.temp_dir.name) / "uploads"),
+                "ACCESS_PASSWORD_HASH_FILE": str(
+                    Path(self.temp_dir.name) / "access_password_hash"
+                ),
             }
         )
         self.database_path = database_path
@@ -125,15 +130,14 @@ class MentorshipAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Mentorship, with a plan.", response.data)
         self.assertIn(b"Learning resources", response.data)
-        self.assertIn(b"+254715552003", response.data)
+        self.assertIn(b"0715552003", response.data)
+        self.assertIn(b"tel:0715552003", response.data)
+        self.assertIn(b"sms:0715552003", response.data)
         self.assertIn(b"https://wa.me/254715552003", response.data)
         self.assertIn(b"https://www.facebook.com/profile.php?id=100083323632489", response.data)
         self.assertIn(b"https://www.youtube.com/@enockochiengu9r", response.data)
         self.assertIn(b"https://www.linkedin.com/feed/", response.data)
-        self.assertIn(
-            b"https://github.com/enocko687-prog/youth-mentorship-platform",
-            response.data,
-        )
+        self.assertIn(b"https://github.com/enocko687-prog/DI-BOOTCAMP-1", response.data)
         self.assertIn(b"Send your request", response.data)
         self.assertNotIn(b"hero-art", response.data)
         self.assertIn(b'class="menu-toggle" type="button"', response.data)
@@ -240,6 +244,166 @@ class MentorshipAppTests(unittest.TestCase):
             )
         finally:
             connection.close()
+
+    def test_public_contact_request_sends_configured_twilio_alert(self):
+        self.app.config.update(
+            TWILIO_ACCOUNT_SID="ACtest",
+            TWILIO_AUTH_TOKEN="test-token",
+            TWILIO_FROM_PHONE="+15005550006",
+            CONTACT_ALERT_PHONE="+254715552003",
+        )
+        token = self.csrf_token("/")
+        with patch("server.urlopen") as mock_urlopen:
+            response = self.client.post(
+                "/contact",
+                data={
+                    "csrf_token": token,
+                    "full_name": "Amina Njeri",
+                    "email": "amina@example.com",
+                    "request_type": "mentorship",
+                    "message": "I would like to find a mentor.",
+                },
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Your request has been sent.", response.data)
+        mock_urlopen.assert_called_once()
+        sms_request = mock_urlopen.call_args.args[0]
+        self.assertEqual(
+            parse_qs(sms_request.data.decode("ascii")),
+            {
+                "To": ["+254715552003"],
+                "From": ["+15005550006"],
+                "Body": [
+                    "A new YMP contact request is waiting in the admin dashboard."
+                ],
+            },
+        )
+        self.assertIn("Authorization", sms_request.headers)
+
+    def test_twilio_alert_failure_keeps_contact_request_and_reports_failure(self):
+        self.app.config.update(
+            TWILIO_ACCOUNT_SID="ACtest",
+            TWILIO_AUTH_TOKEN="test-token",
+            TWILIO_FROM_PHONE="+15005550006",
+        )
+        token = self.csrf_token("/")
+        with patch("server.urlopen", side_effect=URLError("unavailable")):
+            response = self.client.post(
+                "/contact",
+                data={
+                    "csrf_token": token,
+                    "full_name": "Amina Njeri",
+                    "email": "amina@example.com",
+                    "request_type": "mentorship",
+                    "message": "I would like to find a mentor.",
+                },
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"phone alert could not be sent", response.data)
+        connection = sqlite3.connect(self.database_path)
+        try:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM contact_requests"
+                ).fetchone()[0],
+                1,
+            )
+        finally:
+            connection.close()
+
+    def test_twilio_configuration_must_be_complete(self):
+        with self.assertRaisesRegex(RuntimeError, "Configure YMP_TWILIO"):
+            create_app(
+                {
+                    "TESTING": True,
+                    "SECRET_KEY": "test-key",
+                    "DATABASE": str(Path(self.temp_dir.name) / "incomplete.db"),
+                    "UPLOAD_FOLDER": str(Path(self.temp_dir.name) / "incomplete-uploads"),
+                    "TWILIO_ACCOUNT_SID": "ACtest",
+                }
+            )
+
+    def test_shared_access_password_requires_matching_entries_then_grants_session(self):
+        password = "shared-platform-passphrase"
+        self.app.config["ACCESS_PASSWORD_HASH"] = generate_password_hash(password)
+
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.location, "/access")
+        access_page = self.client.get("/access")
+        self.assertEqual(access_page.status_code, 200)
+        self.assertIn(b"Confirm shared password", access_page.data)
+
+        token = self.csrf_token("/access")
+        response = self.client.post(
+            "/access",
+            data={
+                "csrf_token": token,
+                "password": password,
+                "password_confirmation": "different-passphrase",
+            },
+            follow_redirects=True,
+        )
+        self.assertIn(b"The passwords do not match.", response.data)
+        self.assertEqual(self.client.get("/").status_code, 302)
+
+        token = self.csrf_token("/access")
+        response = self.client.post(
+            "/access",
+            data={
+                "csrf_token": token,
+                "password": password,
+                "password_confirmation": password,
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Mentorship, with a plan.", response.data)
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+    def test_access_page_explains_when_shared_password_is_not_configured(self):
+        response = self.client.get("/access")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Access password not set up", response.data)
+        self.assertIn(b"configure-access-password", response.data)
+        self.assertNotIn(b'name="password_confirmation"', response.data)
+
+    def test_access_password_command_saves_a_hash_for_next_app_start(self):
+        runner = self.app.test_cli_runner()
+        result = runner.invoke(
+            args=["configure-access-password"],
+            input="shared-platform-passphrase\nshared-platform-passphrase\n",
+        )
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn("Restart the web app", result.output)
+
+        password_file = Path(self.app.config["ACCESS_PASSWORD_HASH_FILE"])
+        saved_hash = password_file.read_text(encoding="utf-8")
+        self.assertNotEqual(saved_hash, "shared-platform-passphrase")
+        self.assertTrue(check_password_hash(saved_hash, "shared-platform-passphrase"))
+
+    def test_access_password_rotation_revokes_existing_gate_sessions(self):
+        first_password = "first-shared-passphrase"
+        self.app.config["ACCESS_PASSWORD_HASH"] = generate_password_hash(first_password)
+        token = self.csrf_token("/access")
+        self.client.post(
+            "/access",
+            data={
+                "csrf_token": token,
+                "password": first_password,
+                "password_confirmation": first_password,
+            },
+        )
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+        self.app.config["ACCESS_PASSWORD_HASH"] = generate_password_hash(
+            "second-shared-passphrase"
+        )
+        self.assertEqual(self.client.get("/").location, "/access")
 
     def test_registration_login_dashboard_and_logout(self):
         token = self.csrf_token("/register")

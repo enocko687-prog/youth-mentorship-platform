@@ -80,7 +80,8 @@
             <h2>Tell us what you need.</h2>
             <p>Send a mentorship request, ask a question or share feedback. Our programme team will follow up using the contact details you provide.</p>
             <div class="contact-links">
-                <a href="tel:{{ public_contact_phone|replace(' ', '') }}">Call {{ public_contact_phone }}</a>
+                <a href="{{ public_contact_tel_url }}">Call {{ public_contact_phone }}</a>
+                <a href="{{ public_contact_sms_url }}">Text us by SMS</a>
                 <a href="{{ public_whatsapp_url }}" target="_blank" rel="noopener noreferrer">Message us on WhatsApp</a>
                 {% for network, profile_url in public_social_links %}
                     <a href="{{ profile_url }}" target="_blank" rel="noopener noreferrer">{{ network }}</a>

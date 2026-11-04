@@ -22,20 +22,17 @@ YMP is a Flask web application with a responsive interface, account registration
 
 The database is created as `youth_mentorship.db` in this folder the first time the app starts. Existing databases receive additive schema updates on startup; existing records are kept. For local use, the app generates a persistent session key under `instance/`.
 
-## Deploy to Render
+To require a shared access password before visitors can view the platform, run this once from the project folder and enter a passphrase of 12–128 characters twice when prompted:
 
-This repository includes a Render Blueprint in `render.yaml`. To deploy it:
+```powershell
+.\.venv\Scripts\python.exe -m flask --app server configure-access-password
+```
 
-1. Push this project to a GitHub repository.
-2. Sign in to Render and connect your GitHub account.
-3. In the Render dashboard, choose **New + → Blueprint**, select this repository and its deployment branch, then apply the Blueprint.
-4. Wait for the `youth-mentorship-platform` service to finish deploying, then open its Render URL.
-
-The included Blueprint uses Render's free plan and stores its SQLite database and uploads under `/tmp`. That storage is temporary and can be cleared when the service restarts or redeploys. Do not use this configuration for real participant data; use persistent storage and backups before launch.
+Restart the app after setting or changing the password, then send the passphrase to the people you want to let in. The app stores only a password hash in the ignored `instance/` folder. Visitors enter and confirm the shared password on the access page; their browser session is then allowed through the gate. Anyone with this shared password gets the same site access, so use individual accounts for personal identity and never share an administrator password.
 
 ## Deploy to PythonAnywhere
 
-For a PythonAnywhere deployment, you need a PythonAnywhere account and a GitHub repository containing the project. A public repository is simplest to clone; for a private repository, configure GitHub SSH access from PythonAnywhere first. The `.gitignore` excludes the local database, virtual environment, and session key; do not upload these files or commit secrets.
+The app is prepared for deployment, but is not yet published. You need a PythonAnywhere account and a GitHub repository containing the project. A public repository is simplest to clone; for a private repository, configure GitHub SSH access from PythonAnywhere first. The `.gitignore` excludes the local database, virtual environment, and session key; do not upload these files or commit secrets.
 
 1. Push the project to a GitHub repository. A private repository is recommended.
 2. In PythonAnywhere, create a web app using **Manual configuration** and a Python version 3.10 or later.
@@ -81,6 +78,8 @@ For a PythonAnywhere deployment, you need a PythonAnywhere account and a GitHub 
    /home/<username>/.virtualenvs/ymp/bin/python -m flask --app server create-admin
    ```
 
+To enable the shared access gate on PythonAnywhere, run `/home/<username>/.virtualenvs/ymp/bin/python -m flask --app server configure-access-password` in a Bash console, then reload the web app. The password hash is saved under the project `instance/` directory, which must be writable and persistent.
+
 Production mode refuses to start without `YMP_SECRET_KEY`. Keep the database on your account's persistent storage, back it up regularly, and do not run multiple app instances against the same SQLite file. The built-in Flask server is for local development only. See the [PythonAnywhere Flask deployment guide](https://help.pythonanywhere.com/pages/Flask/) for provider-specific setup details.
 
 ## Current functionality
@@ -95,7 +94,8 @@ Production mode refuses to start without `YMP_SECRET_KEY`. Keep the database on 
 - Mentees can send goal-related work as notes, an HTTP/HTTPS link, or a PDF/JPG/PNG attachment (up to 5 MB); only their accepted mentor can review it and return feedback.
 - Uploaded work is private to the submitting mentee and their currently matched mentor. Configure `YMP_UPLOAD_FOLDER` on a persistent disk for deployments where uploaded files must survive restarts.
 - Responsive landing page and dashboard with the custom YMP logo.
-- Public programme phone defaults to `+254715552003`; set `YMP_PUBLIC_CONTACT_PHONE` to change it. WhatsApp contact links are generated from that number.
+- Public programme phone defaults to `0715552003`; set `YMP_PUBLIC_CONTACT_PHONE` to change it. Call and SMS links use the configured number, while local Kenyan numbers are converted to international format for WhatsApp and Twilio.
+- Optional Twilio SMS alerts notify the programme phone when a public contact request is submitted. Set `YMP_TWILIO_ACCOUNT_SID`, `YMP_TWILIO_AUTH_TOKEN`, and `YMP_TWILIO_FROM_PHONE` together to enable alerts; `YMP_CONTACT_ALERT_PHONE` can override the destination and otherwise defaults to `YMP_PUBLIC_CONTACT_PHONE`. Use E.164 phone numbers (for example, `+254715552003`). Configure these as private environment variables in the hosting provider, never in source control. Create a Twilio account and SMS-enabled sender number first; trial accounts may only send to verified recipient numbers. If delivery fails, the request remains saved in the admin inbox and the site reports the alert failure.
 - Public Facebook, YouTube, LinkedIn, and GitHub links are shown in the homepage contact section and footer. Override them with `YMP_FACEBOOK_URL`, `YMP_YOUTUBE_URL`, `YMP_LINKEDIN_URL`, and `YMP_GITHUB_URL`.
 
 Password recovery and email verification still need a configured email provider and are not enabled.

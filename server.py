@@ -1,3 +1,4 @@
+import base64
 import hmac
 import os
 import re
@@ -7,7 +8,9 @@ import uuid
 from datetime import date, datetime, time
 from functools import wraps
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode, urlsplit
+from urllib.request import Request as URLRequest, urlopen
 
 from flask import (
     Flask,
@@ -33,6 +36,55 @@ MAX_WORK_FILE_BYTES = 5 * 1024 * 1024
 MAX_UPLOAD_REQUEST_BYTES = MAX_WORK_FILE_BYTES + 64 * 1024
 
 
+def _international_phone_number(phone_number):
+    cleaned_number = re.sub(r"[^\d+]", "", phone_number)
+    if re.fullmatch(r"0\d{9}", cleaned_number):
+        return f"+254{cleaned_number[1:]}"
+    return cleaned_number
+
+
+def _send_contact_request_sms(app):
+    account_sid = app.config["TWILIO_ACCOUNT_SID"]
+    auth_token = app.config["TWILIO_AUTH_TOKEN"]
+    from_phone = app.config["TWILIO_FROM_PHONE"]
+    if not all((account_sid, auth_token, from_phone)):
+        return None
+
+    message = "A new YMP contact request is waiting in the admin dashboard."
+    payload = urlencode(
+        {
+            "To": app.config["CONTACT_ALERT_PHONE"],
+            "From": from_phone,
+            "Body": message,
+        }
+    ).encode("ascii")
+    authorization = base64.b64encode(
+        f"{account_sid}:{auth_token}".encode("utf-8")
+    ).decode("ascii")
+    sms_request = URLRequest(
+        f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json",
+        data=payload,
+        headers={
+            "Authorization": f"Basic {authorization}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(sms_request, timeout=10):
+            return True
+    except HTTPError as error:
+        app.logger.error(
+            "Twilio contact alert failed with HTTP status %s.", error.code
+        )
+    except (URLError, TimeoutError) as error:
+        app.logger.error(
+            "Twilio contact alert failed due to a network error (%s).",
+            type(error).__name__,
+        )
+    return False
+
+
 def _get_secret_key(instance_path):
     configured_key = os.environ.get("YMP_SECRET_KEY")
     if configured_key:
@@ -56,8 +108,16 @@ def create_app(test_config=None):
         SECRET_KEY=_get_secret_key(app.instance_path),
         DATABASE=os.environ.get("YMP_DATABASE_PATH", str(database.DATABASE_PATH)),
         PUBLIC_CONTACT_PHONE=os.environ.get(
-            "YMP_PUBLIC_CONTACT_PHONE", "+254715552003"
+            "YMP_PUBLIC_CONTACT_PHONE", "0715552003"
         ),
+        CONTACT_ALERT_PHONE=os.environ.get("YMP_CONTACT_ALERT_PHONE"),
+        TWILIO_ACCOUNT_SID=os.environ.get("YMP_TWILIO_ACCOUNT_SID"),
+        TWILIO_AUTH_TOKEN=os.environ.get("YMP_TWILIO_AUTH_TOKEN"),
+        TWILIO_FROM_PHONE=os.environ.get("YMP_TWILIO_FROM_PHONE"),
+        ACCESS_PASSWORD_HASH_FILE=str(
+            Path(app.instance_path) / "access_password_hash"
+        ),
+        ACCESS_PASSWORD_HASH=None,
         PUBLIC_SOCIAL_LINKS=(
             (
                 "Facebook",
@@ -81,7 +141,7 @@ def create_app(test_config=None):
                 "GitHub",
                 os.environ.get(
                     "YMP_GITHUB_URL",
-                    "https://github.com/enocko687-prog/youth-mentorship-platform",
+                    "https://github.com/enocko687-prog/DI-BOOTCAMP-1",
                 ),
             ),
         ),
@@ -96,6 +156,27 @@ def create_app(test_config=None):
     )
     if test_config:
         app.config.update(test_config)
+    if not test_config or "ACCESS_PASSWORD_HASH" not in test_config:
+        access_password_file = Path(app.config["ACCESS_PASSWORD_HASH_FILE"])
+        if access_password_file.exists():
+            app.config["ACCESS_PASSWORD_HASH"] = access_password_file.read_text(
+                encoding="utf-8"
+            ).strip()
+    if not app.config["CONTACT_ALERT_PHONE"]:
+        app.config["CONTACT_ALERT_PHONE"] = app.config["PUBLIC_CONTACT_PHONE"]
+    app.config["CONTACT_ALERT_PHONE"] = _international_phone_number(
+        app.config["CONTACT_ALERT_PHONE"]
+    )
+    twilio_settings = (
+        app.config["TWILIO_ACCOUNT_SID"],
+        app.config["TWILIO_AUTH_TOKEN"],
+        app.config["TWILIO_FROM_PHONE"],
+    )
+    if any(twilio_settings) and not all(twilio_settings):
+        raise RuntimeError(
+            "Configure YMP_TWILIO_ACCOUNT_SID, YMP_TWILIO_AUTH_TOKEN, and "
+            "YMP_TWILIO_FROM_PHONE together."
+        )
 
     database_path = app.config["DATABASE"]
     if str(database_path) != ":memory:":
@@ -124,13 +205,28 @@ def create_app(test_config=None):
 
     @app.context_processor
     def inject_template_values():
-        whatsapp_number = re.sub(r"\D", "", app.config["PUBLIC_CONTACT_PHONE"])
+        phone_number = re.sub(r"[^\d+]", "", app.config["PUBLIC_CONTACT_PHONE"])
+        whatsapp_number = re.sub(
+            r"\D", "", _international_phone_number(phone_number)
+        )
         return {
             "csrf_token": current_csrf_token,
             "public_contact_phone": app.config["PUBLIC_CONTACT_PHONE"],
+            "public_contact_tel_url": f"tel:{phone_number}",
+            "public_contact_sms_url": f"sms:{phone_number}",
             "public_whatsapp_url": f"https://wa.me/{whatsapp_number}",
             "public_social_links": app.config["PUBLIC_SOCIAL_LINKS"],
         }
+
+    @app.before_request
+    def require_shared_access():
+        password_hash = app.config["ACCESS_PASSWORD_HASH"]
+        if request.endpoint in {"static", "shared_access"} or not password_hash:
+            return
+
+        granted_hash = session.get("site_access_granted", "")
+        if not hmac.compare_digest(granted_hash, password_hash):
+            return redirect(url_for("shared_access"))
 
     @app.before_request
     def clear_invalid_session():
@@ -246,9 +342,48 @@ def create_app(test_config=None):
             connection.close()
         click.echo("Administrator account created.")
 
+    @app.cli.command("configure-access-password")
+    def configure_access_password():
+        """Set the shared password required to access the platform."""
+        password = click.prompt(
+            "Shared platform access password",
+            hide_input=True,
+            confirmation_prompt=True,
+        )
+        if not 12 <= len(password) <= 128:
+            raise click.ClickException(
+                "Use a shared access password between 12 and 128 characters."
+            )
+
+        password_file = Path(app.config["ACCESS_PASSWORD_HASH_FILE"])
+        password_file.parent.mkdir(parents=True, exist_ok=True)
+        password_file.write_text(generate_password_hash(password), encoding="utf-8")
+        click.echo(
+            "Shared access password saved. Restart the web app to apply the change."
+        )
+
     @app.get("/")
     def home():
         return render_template("index.html")
+
+    @app.route("/access", methods=["GET", "POST"])
+    def shared_access():
+        password_hash = app.config["ACCESS_PASSWORD_HASH"]
+        if not password_hash:
+            return render_template("shared_access.html", password_configured=False)
+        if request.method == "POST":
+            password = request.form.get("password", "")
+            password_confirmation = request.form.get("password_confirmation", "")
+            if not hmac.compare_digest(password, password_confirmation):
+                flash("The passwords do not match. Please try again.", "error")
+            elif not 12 <= len(password) <= 128 or not check_password_hash(
+                password_hash, password
+            ):
+                flash("The shared password is incorrect.", "error")
+            else:
+                session["site_access_granted"] = password_hash
+                return redirect(url_for("home"))
+        return render_template("shared_access.html", password_configured=True)
 
     @app.post("/contact")
     def submit_contact_request():
@@ -282,10 +417,19 @@ def create_app(test_config=None):
                 (full_name, email, phone or None, request_type, message),
             )
             get_db().commit()
-            flash(
-                "Your request has been sent. We will contact you using the details provided.",
-                "success",
-            )
+            if _send_contact_request_sms(app) is False:
+                flash(
+                    "Your request was saved, but the programme team's phone "
+                    "alert could not be sent. Please call us directly if your "
+                    "request is urgent.",
+                    "error",
+                )
+            else:
+                flash(
+                    "Your request has been sent. We will contact you using "
+                    "the details provided.",
+                    "success",
+                )
         return redirect(url_for("home") + "#contact")
 
     @app.route("/register", methods=["GET", "POST"])

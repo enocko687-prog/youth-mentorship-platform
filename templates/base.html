@@ -3,10 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#10263b">
+    <meta name="theme-color" content="#12110f">
     <meta name="description" content="Connect with mentors, set goals, request sessions and find learning resources with YMP.">
     <title>{% block title %}Youth Mentorship Platform{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='ymp-mark.svg') }}" type="image/svg+xml">
+    <link rel="alternate icon" href="{{ url_for('static', filename='eb-crown-mark.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
     <script src="{{ url_for('static', filename='site.js') }}" defer></script>
 </head>
@@ -59,7 +60,8 @@
             </a>
             <p>Mentorship, goals and learning resources for young people.</p>
             <div class="footer-contact">
-                <a href="tel:{{ public_contact_phone|replace(' ', '') }}">{{ public_contact_phone }}</a>
+                <a href="{{ public_contact_tel_url }}">{{ public_contact_phone }}</a>
+                <a href="{{ public_contact_sms_url }}">SMS</a>
                 <a href="{{ public_whatsapp_url }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
                 {% for network, profile_url in public_social_links %}
                     <a href="{{ profile_url }}" target="_blank" rel="noopener noreferrer">{{ network }}</a>
