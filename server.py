@@ -43,6 +43,21 @@ def _international_phone_number(phone_number):
     return cleaned_number
 
 
+def _phone_action_urls(phone_number, message):
+    international_number = _international_phone_number(phone_number)
+    digits = re.sub(r"\D", "", international_number)
+    if not re.fullmatch(r"[1-9]\d{7,14}", digits):
+        return None
+
+    encoded_message = urlencode({"body": message})
+    whatsapp_message = urlencode({"text": message})
+    return {
+        "tel": f"tel:+{digits}",
+        "sms": f"sms:+{digits}?{encoded_message}",
+        "whatsapp": f"https://wa.me/{digits}?{whatsapp_message}",
+    }
+
+
 def _send_contact_request_sms(app):
     account_sid = app.config["TWILIO_ACCOUNT_SID"]
     auth_token = app.config["TWILIO_AUTH_TOKEN"]
@@ -167,6 +182,14 @@ def create_app(test_config=None):
     app.config["CONTACT_ALERT_PHONE"] = _international_phone_number(
         app.config["CONTACT_ALERT_PHONE"]
     )
+    if _phone_action_urls(
+        app.config["PUBLIC_CONTACT_PHONE"],
+        "Hello, I would like to know more about the Youth Mentorship Platform.",
+    ) is None:
+        raise RuntimeError(
+            "YMP_PUBLIC_CONTACT_PHONE must be a valid phone number in international "
+            "format or a 10-digit Kenyan mobile number."
+        )
     twilio_settings = (
         app.config["TWILIO_ACCOUNT_SID"],
         app.config["TWILIO_AUTH_TOKEN"],
@@ -205,16 +228,17 @@ def create_app(test_config=None):
 
     @app.context_processor
     def inject_template_values():
-        phone_number = re.sub(r"[^\d+]", "", app.config["PUBLIC_CONTACT_PHONE"])
-        whatsapp_number = re.sub(
-            r"\D", "", _international_phone_number(phone_number)
+        public_phone_actions = _phone_action_urls(
+            app.config["PUBLIC_CONTACT_PHONE"],
+            "Hello, I would like to know more about the Youth Mentorship Platform.",
         )
         return {
             "csrf_token": current_csrf_token,
             "public_contact_phone": app.config["PUBLIC_CONTACT_PHONE"],
-            "public_contact_tel_url": f"tel:{phone_number}",
-            "public_contact_sms_url": f"sms:{phone_number}",
-            "public_whatsapp_url": f"https://wa.me/{whatsapp_number}",
+            "public_contact_tel_url": public_phone_actions["tel"],
+            "public_contact_sms_url": public_phone_actions["sms"],
+            "public_whatsapp_url": public_phone_actions["whatsapp"],
+            "phone_action_urls": _phone_action_urls,
             "public_social_links": app.config["PUBLIC_SOCIAL_LINKS"],
         }
 

@@ -56,8 +56,12 @@
                             <div class="contact-request-links">
                                 <a href="mailto:{{ item['email'] }}?subject={{ ('YMP follow-up: ' ~ item['request_type'])|urlencode }}">Email {{ item["email"] }}</a>
                                 {% if item["phone"] %}
-                                    <a href="tel:{{ item['phone']|replace(' ', '')|replace('-', '') }}">Call {{ item["phone"] }}</a>
-                                    <a href="https://wa.me/{{ item['phone']|replace('+', '')|replace(' ', '')|replace('-', '')|replace('(', '')|replace(')', '')|replace('.', '') }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                                    {% set phone_actions = phone_action_urls(item["phone"], "Hello " ~ item["full_name"] ~ ", following up on your YMP " ~ item["request_type"] ~ " request.") %}
+                                    {% if phone_actions %}
+                                        <a href="{{ phone_actions['tel'] }}">Call {{ item["phone"] }}</a>
+                                        <a href="{{ phone_actions['sms'] }}">SMS {{ item["phone"] }}</a>
+                                        <a href="{{ phone_actions['whatsapp'] }}" target="_blank" rel="noopener noreferrer">WhatsApp {{ item["phone"] }}</a>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </div>

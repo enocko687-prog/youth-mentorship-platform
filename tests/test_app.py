@@ -132,9 +132,15 @@ class MentorshipAppTests(unittest.TestCase):
         self.assertIn(b"Start your journey", response.data)
         self.assertIn(b"find learning resources", response.data)
         self.assertIn(b"0715552003", response.data)
-        self.assertIn(b"tel:0715552003", response.data)
-        self.assertIn(b"sms:0715552003", response.data)
-        self.assertIn(b"https://wa.me/254715552003", response.data)
+        self.assertIn(b"tel:+254715552003", response.data)
+        self.assertIn(
+            b"sms:+254715552003?body=Hello%2C+I+would+like+to+know+more+about+the+Youth+Mentorship+Platform.",
+            response.data,
+        )
+        self.assertIn(
+            b"https://wa.me/254715552003?text=Hello%2C+I+would+like+to+know+more+about+the+Youth+Mentorship+Platform.",
+            response.data,
+        )
         self.assertIn(b"https://www.facebook.com/profile.php?id=100083323632489", response.data)
         self.assertIn(b"https://www.youtube.com/@enockochiengu9r", response.data)
         self.assertIn(b"https://www.linkedin.com/feed/", response.data)
@@ -146,6 +152,14 @@ class MentorshipAppTests(unittest.TestCase):
         asset_response = self.client.get("/static/ymp-mark.svg")
         self.assertEqual(asset_response.status_code, 200)
         asset_response.close()
+
+    def test_public_phone_action_links_normalize_formatted_number(self):
+        self.app.config["PUBLIC_CONTACT_PHONE"] = "+254 (715) 552-003"
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"tel:+254715552003", response.data)
+        self.assertIn(b"sms:+254715552003?body=", response.data)
+        self.assertIn(b"https://wa.me/254715552003?text=", response.data)
 
     def test_public_contact_request_is_saved_and_admin_can_follow_up(self):
         token = self.csrf_token("/")
@@ -194,7 +208,12 @@ class MentorshipAppTests(unittest.TestCase):
         self.assertIn(b"Amina Njeri", login_response.data)
         self.assertIn(b"I would like to find a mentor.", login_response.data)
         self.assertIn(b"mailto:amina@example.com", login_response.data)
-        self.assertIn(b"https://wa.me/254700123456", login_response.data)
+        self.assertIn(b"tel:+254700123456", login_response.data)
+        self.assertIn(b"sms:+254700123456?body=", login_response.data)
+        self.assertIn(
+            b"https://wa.me/254700123456?text=Hello+Amina+Njeri%2C+following+up+on+your+YMP+mentorship+request.",
+            login_response.data,
+        )
         self.assertIn(b"WhatsApp", login_response.data)
 
         self.post_as_signed_in_user(
