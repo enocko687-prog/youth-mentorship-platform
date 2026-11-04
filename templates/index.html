@@ -4,24 +4,42 @@
 <section class="hero">
     <div class="shell hero-grid">
         <div class="hero-copy">
-            <p class="eyebrow">Youth Mentorship Platform</p>
-            <h1>Mentorship, with a plan.</h1>
+            <p class="eyebrow"><span class="hero-eyebrow-mark" aria-hidden="true">✦</span> A space to grow, together</p>
+            <h1>Your next step feels closer <span>with the right support.</span></h1>
             <p class="hero-description">
-                Connect with a mentor, set goals, request sessions and find learning resources in one place.
+                Turn the things you hope to do into a plan you can follow—with a mentor, meaningful goals and helpful resources alongside you.
             </p>
             <div class="hero-actions">
-                <a class="button button-gold" href="{{ url_for('register') }}">Create an account</a>
-                <a class="text-link text-link-light" href="#journey">How it works</a>
+                <a class="button button-gold" href="{{ url_for('register') }}">Start your journey <span aria-hidden="true">→</span></a>
+                <a class="text-link text-link-light" href="#journey">See how it works <span aria-hidden="true">↓</span></a>
             </div>
+            <p class="hero-audience">For young people ready to grow—and mentors ready to guide.</p>
         </div>
-        <div class="platform-summary" aria-label="Platform features">
-            <p class="platform-summary-label">What you can do on YMP</p>
-            <ul>
-                <li><span>Mentor connections</span><span>Send and manage match requests</span></li>
-                <li><span>Personal goals</span><span>Set goals and update your progress</span></li>
-                <li><span>Sessions</span><span>Request and keep track of meetings</span></li>
-                <li><span>Learning resources</span><span>Browse materials shared by the programme</span></li>
-            </ul>
+        <div class="hero-preview" role="img" aria-label="Illustration preview of your mentorship workspace">
+            <div class="preview-orbit preview-orbit-one" aria-hidden="true"></div>
+            <div class="preview-orbit preview-orbit-two" aria-hidden="true"></div>
+            <div class="preview-card">
+                <div class="preview-topline">
+                    <span class="preview-brand"><img src="{{ url_for('static', filename='ymp-mark.svg') }}" alt=""> YOUR GROWTH SPACE</span>
+                    <span class="preview-live"><span></span> ONE STEP AT A TIME</span>
+                </div>
+                <div class="preview-welcome">
+                    <span class="preview-avatar" aria-hidden="true">✦</span>
+                    <div><span class="preview-kicker">A little progress adds up</span><strong>Make room for what’s next.</strong></div>
+                </div>
+                <div class="preview-goal">
+                    <div class="preview-goal-heading"><span>YOUR GOALS</span><span aria-hidden="true">↗</span></div>
+                    <strong>Build confidence in my next step</strong>
+                    <div class="preview-progress" aria-hidden="true"><span></span></div>
+                    <span class="preview-progress-label">A plan you can revisit and grow</span>
+                </div>
+                <div class="preview-bottom">
+                    <div class="preview-mentor-icon" aria-hidden="true">↗</div>
+                    <div><span class="preview-kicker">Guidance along the way</span><strong>Connect. Reflect. Keep going.</strong></div>
+                    <span class="preview-arrow" aria-hidden="true">→</span>
+                </div>
+            </div>
+            <div class="preview-note" aria-hidden="true"><span>✳</span> Small steps matter</div>
         </div>
     </div>
 </section>
@@ -29,22 +47,22 @@
 <section class="section journey-section" id="journey">
     <div class="shell">
         <div class="section-heading">
-            <p class="eyebrow eyebrow-dark">Getting started</p>
-            <h2>How YMP works</h2>
-            <p>Set up your profile, connect with a mentor and use the platform to keep your plans organized.</p>
+            <p class="eyebrow eyebrow-dark">A journey that starts with you</p>
+            <h2>Turn “someday” into a next step.</h2>
+            <p>You don’t need to have everything figured out. Start where you are, and use YMP to make progress at your own pace.</p>
         </div>
         <div class="journey-grid">
             <article class="journey-card">
                 <span class="step-number">01</span><span class="step-icon" aria-hidden="true">◎</span>
-                <h3>Create your profile</h3><p>Register as a mentee or mentor and add the details needed to get started.</p>
+                <h3>Start with your goals</h3><p>Create your profile and share what you’re working toward—or how you’d like to support someone else.</p>
             </article>
             <article class="journey-card">
                 <span class="step-number">02</span><span class="step-icon" aria-hidden="true">◎</span>
-                <h3>Manage mentor matches</h3><p>Mentees can request a match. Mentors can review requests and manage their connections.</p>
+                <h3>Find your people</h3><p>Mentees can request a mentor match, and mentors can review requests and build supportive connections.</p>
             </article>
             <article class="journey-card">
                 <span class="step-number">03</span><span class="step-icon" aria-hidden="true">✳</span>
-                <h3>Keep track of next steps</h3><p>Update goals, request sessions and access learning resources from your dashboard.</p>
+                <h3>Keep moving forward</h3><p>Track your goals, plan a session and find learning resources—all from your own dashboard.</p>
             </article>
         </div>
     </div>
@@ -54,21 +72,21 @@
     <div class="shell promise-grid">
         <div>
             <p class="eyebrow">For mentees and mentors</p>
-            <h2>The practical details, in one place.</h2>
+            <h2>You bring the ambition. We’ll help you shape the path.</h2>
         </div>
         <div class="promise-copy">
-            <p>Use your dashboard to review goals, plan action steps, manage session requests and find learning materials shared by the programme.</p>
-            <a class="text-link text-link-light" href="{{ url_for('register') }}">Create an account</a>
+            <p>Make your goals easier to act on. Keep track of action steps, plan sessions with your mentor and find learning materials shared by the programme—all in one place.</p>
+            <a class="text-link text-link-light" href="{{ url_for('register') }}">Take your first step <span aria-hidden="true">→</span></a>
         </div>
     </div>
 </section>
 
 <section class="closing-section">
     <div class="shell closing-card">
-        <p class="eyebrow eyebrow-dark">Get started</p>
-        <h2>Ready to use YMP?</h2>
-        <p>Create an account to access the mentorship platform.</p>
-        <a class="button button-dark" href="{{ url_for('register') }}">Create an account</a>
+        <p class="eyebrow eyebrow-dark">Your next chapter</p>
+        <h2>You don’t have to figure it all out alone.</h2>
+        <p>Start with one goal. Build from there, with support along the way.</p>
+        <a class="button button-dark" href="{{ url_for('register') }}">Join the platform <span aria-hidden="true">→</span></a>
         <p class="closing-signin">Already part of YMP? <a href="{{ url_for('login') }}">Sign in</a></p>
     </div>
 </section>

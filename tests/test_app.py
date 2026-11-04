@@ -128,8 +128,9 @@ class MentorshipAppTests(unittest.TestCase):
     def test_home_and_assets_render(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Mentorship, with a plan.", response.data)
-        self.assertIn(b"Learning resources", response.data)
+        self.assertIn(b"Your next step feels closer", response.data)
+        self.assertIn(b"Start your journey", response.data)
+        self.assertIn(b"find learning resources", response.data)
         self.assertIn(b"0715552003", response.data)
         self.assertIn(b"tel:0715552003", response.data)
         self.assertIn(b"sms:0715552003", response.data)
@@ -362,7 +363,7 @@ class MentorshipAppTests(unittest.TestCase):
             follow_redirects=True,
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Mentorship, with a plan.", response.data)
+        self.assertIn(b"Your next step feels closer", response.data)
         self.assertEqual(self.client.get("/").status_code, 200)
 
     def test_access_page_explains_when_shared_password_is_not_configured(self):
