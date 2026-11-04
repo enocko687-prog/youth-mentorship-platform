@@ -975,6 +975,67 @@ class MentorshipAppTests(unittest.TestCase):
         self.post_as_signed_in_user(
             f"/mentor/matches/{match_id}/accept", client=mentor_client
         )
+        self.post_as_signed_in_user(
+            "/goals",
+            {
+                "title": "Prepare a portfolio",
+                "description": "Collect three project examples",
+            },
+            mentee_client,
+        )
+        connection = sqlite3.connect(self.database_path)
+        try:
+            goal_id = connection.execute(
+                "SELECT id FROM goals WHERE mentee_id = 2 AND title = ?",
+                ("Prepare a portfolio",),
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        self.post_as_signed_in_user(
+            f"/goals/{goal_id}/progress", {"progress": "45"}, mentee_client
+        )
+        self.post_as_signed_in_user(
+            "/actions", {"title": "Choose project examples"}, mentee_client
+        )
+        self.post_as_signed_in_user(
+            "/actions", {"title": "Write project summaries"}, mentee_client
+        )
+        connection = sqlite3.connect(self.database_path)
+        try:
+            action_id = connection.execute(
+                "SELECT id FROM action_plans WHERE mentee_id = 2 "
+                "AND title = 'Choose project examples'"
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        self.post_as_signed_in_user(
+            f"/actions/{action_id}/complete", client=mentee_client
+        )
+        mentor_progress = mentor_client.get("/mentor")
+        self.assertIn(b"Mentee progress", mentor_progress.data)
+        self.assertIn(b"Prepare a portfolio", mentor_progress.data)
+        self.assertIn(b"45%", mentor_progress.data)
+        self.assertIn(b"1/2", mentor_progress.data)
+
+        other_mentor_id = self.create_user(
+            "Other Mentor", "other-mentor@example.com", "mentor"
+        )
+        connection = sqlite3.connect(self.database_path)
+        try:
+            connection.execute(
+                "INSERT INTO mentor_profiles (user_id, vetting_status) "
+                "VALUES (?, 'approved')",
+                (other_mentor_id,),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+        other_mentor_client = self.app.test_client()
+        with other_mentor_client.session_transaction() as current_session:
+            current_session["user_id"] = other_mentor_id
+        other_mentor_dashboard = other_mentor_client.get("/mentor")
+        self.assertNotIn(b"Prepare a portfolio", other_mentor_dashboard.data)
+
         future_date = (date.today() + timedelta(days=2)).isoformat()
         self.post_as_signed_in_user(
             "/sessions",

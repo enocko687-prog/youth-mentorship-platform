@@ -14,6 +14,7 @@
         <nav class="dashboard-shortcuts" aria-label="Mentor workspace sections">
             <a href="#profile">Profile</a>
             <a href="#matches">Mentee requests</a>
+            <a href="#progress">Mentee progress</a>
             <a href="#submissions">Work to review</a>
             <a href="#sessions">Sessions</a>
         </nav>
@@ -52,6 +53,32 @@
                 </div>
             </section>
         </div>
+
+        <section class="workspace-card workspace-wide" id="progress">
+            <div class="workspace-heading"><div><span class="card-kicker">SUPPORT THEIR NEXT STEP</span><h2>Mentee progress</h2></div><span class="workspace-symbol" aria-hidden="true">↗</span></div>
+            <p class="workspace-intro">Progress is shared here only after a mentee accepts your match. Check in on their goals and celebrate each step forward.</p>
+            <div class="mentee-progress-grid">
+                {% for mentee in mentee_progress %}
+                    <article class="mentee-progress-card">
+                        <div class="mentee-progress-heading"><span class="avatar">{{ mentee["full_name"][0]|upper }}</span><div><span class="card-kicker">YOUR MENTEE</span><h3>{{ mentee["full_name"] }}</h3></div></div>
+                        <div class="mentee-progress-summary"><strong>{{ mentee["goals"]|length }}</strong><span>goal{% if mentee["goals"]|length != 1 %}s{% endif %}</span><strong>{{ mentee["action_completed"] }}/{{ mentee["action_total"] }}</strong><span>action steps complete</span></div>
+                        <div class="mentee-goal-list">
+                            {% for goal in mentee["goals"] %}
+                                <div class="mentee-goal">
+                                    <div class="mentee-goal-heading"><strong>{{ goal["title"] }}</strong><span>{{ goal["progress"] }}%</span></div>
+                                    <div class="progress-track" role="progressbar" aria-label="{{ mentee['full_name'] }}: {{ goal['title'] }} progress" aria-valuenow="{{ goal['progress'] }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ goal['progress'] }}%"></span></div>
+                                    <small>{{ goal["status"]|replace("_", " ")|title }}{% if goal["target_date"] %} · Target {{ goal["target_date"] }}{% endif %}</small>
+                                </div>
+                            {% else %}
+                                <p class="empty-state">No goals added yet. Check in with your mentee to help them choose a first step.</p>
+                            {% endfor %}
+                        </div>
+                    </article>
+                {% else %}
+                    <p class="empty-state">Progress appears here after a mentee accepts your match.</p>
+                {% endfor %}
+            </div>
+        </section>
 
         <section class="workspace-card workspace-wide" id="submissions">
             <div class="workspace-heading"><div><span class="card-kicker">REVIEW MENTEE WORK</span><h2>Work sent for review</h2></div><span class="workspace-symbol" aria-hidden="true">↙</span></div>

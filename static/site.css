@@ -271,6 +271,21 @@ img { display: block; max-width: 100%; }
 .submission-item a { color: var(--accent-deep); font-size: 10px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
 .submission-feedback { padding: 9px 11px; border-radius: 6px; color: var(--ink-soft) !important; background: #f5eedc; }
 .submission-feedback-form { max-width: 560px; }
+.mentee-progress-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.mentee-progress-card { min-width: 0; padding: 17px; border: 1px solid #eeece5; border-radius: 9px; background: #fdfcf8; }
+.mentee-progress-heading { display: flex; align-items: center; gap: 10px; padding-bottom: 13px; border-bottom: 1px solid #eeece5; }
+.mentee-progress-heading .avatar { width: 35px; height: 35px; }
+.mentee-progress-heading .card-kicker { font-size: 8px; }
+.mentee-progress-heading h3 { margin: 2px 0 0; font-family: var(--display); font-size: 13px; }
+.mentee-progress-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 7px; padding: 12px 0; color: var(--muted); font-size: 9px; }
+.mentee-progress-summary strong { color: var(--ink); font-family: var(--display); font-size: 14px; }
+.mentee-progress-summary strong:nth-of-type(2) { margin-left: auto; }
+.mentee-goal-list { display: grid; gap: 12px; }
+.mentee-goal { padding: 11px; border-radius: 7px; background: white; }
+.mentee-goal-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.mentee-goal-heading strong { font-size: 10px; }
+.mentee-goal-heading span { flex: 0 0 auto; color: var(--accent-deep); font-size: 10px; font-weight: 700; }
+.mentee-goal small { display: block; margin-top: 6px; color: var(--muted); font-size: 9px; }
 .progress-track { height: 5px; overflow: hidden; margin-top: 5px; border-radius: 9px; background: #edf0ea; }
 .progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--accent-deep); }
 .empty-state { margin: 0; padding: 12px; border-radius: 7px; color: #7c898c; background: #f8f8f4; font-size: 10px; line-height: 1.7; }
@@ -364,6 +379,7 @@ img { display: block; max-width: 100%; }
     .resource-row > div:nth-child(2) { flex: 1; min-width: 190px; }
     .resource-count { margin-left: 63px; }
     .support-banner { align-items: flex-start; padding: 15px; }
+    .mentee-progress-grid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

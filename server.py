@@ -1110,6 +1110,47 @@ def create_app(test_config=None):
             """,
             (mentor_id,),
         ).fetchall()
+        accepted_mentees = connection.execute(
+            """
+            SELECT users.id, users.full_name
+            FROM mentor_matches
+            JOIN users ON users.id = mentor_matches.mentee_id
+            WHERE mentor_matches.mentor_id = ?
+                AND mentor_matches.match_status = 'accepted'
+            ORDER BY users.full_name
+            """,
+            (mentor_id,),
+        ).fetchall()
+        mentee_progress = []
+        for mentee in accepted_mentees:
+            mentee_id = mentee["id"]
+            goals = connection.execute(
+                """
+                SELECT title, progress, status, target_date
+                FROM goals
+                WHERE mentee_id = ?
+                ORDER BY created_at DESC, id DESC
+                """,
+                (mentee_id,),
+            ).fetchall()
+            action_summary = connection.execute(
+                """
+                SELECT COUNT(*) AS total,
+                       COALESCE(SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END), 0)
+                           AS completed
+                FROM action_plans
+                WHERE mentee_id = ?
+                """,
+                (mentee_id,),
+            ).fetchone()
+            mentee_progress.append(
+                {
+                    "full_name": mentee["full_name"],
+                    "goals": goals,
+                    "action_total": action_summary["total"],
+                    "action_completed": action_summary["completed"],
+                }
+            )
         bookings = connection.execute(
             """
             SELECT bookings.id, bookings.session_date, bookings.session_time,
@@ -1148,6 +1189,7 @@ def create_app(test_config=None):
             user=g.user,
             profile=profile,
             matches=matches,
+            mentee_progress=mentee_progress,
             bookings=bookings,
             work_submissions=work_submissions,
         )
